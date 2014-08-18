@@ -46,3 +46,9 @@ by Marcin Szamotulski
 
 This patch adds `+cmd` argument for `:buffer`, `:sbuffer`, `:bnext`,
 `:bprevious`, ... and all friends.  See `:help +cmd`.
+
+`color-digraph-list.patch`
+-------------------------
+by Dominique Pellé
+
+Add colors to `:digraph` output, useful when searching for a digraph.

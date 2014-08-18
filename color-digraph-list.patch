@@ -1,0 +1,23 @@
+diff -r 538ff809ae53 src/digraph.c
+--- a/src/digraph.c	Thu Nov 29 20:10:00 2012 +0100
++++ b/src/digraph.c	Sat Dec 01 20:59:47 2012 +0100
+@@ -2324,6 +2324,9 @@
+ 	*p++ = dp->char1;
+ 	*p++ = dp->char2;
+ 	*p++ = ' ';
++	*p = NUL;
++	msg_outtrans(buf);
++	p = buf;
+ #ifdef FEAT_MBYTE
+ 	if (has_mbyte)
+ 	{
+@@ -2335,6 +2338,9 @@
+ 	else
+ #endif
+ 	    *p++ = (char_u)dp->result;
++	*p = NUL;
++	msg_outtrans_attr(buf,  hl_attr(HLF_D));
++	p = buf;
+ 	if (char2cells(dp->result) == 1)
+ 	    *p++ = ' ';
+ 	vim_snprintf((char *)p, sizeof(buf) - (p - buf), " %3d", dp->result);
