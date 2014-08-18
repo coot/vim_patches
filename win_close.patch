@@ -1,0 +1,1108 @@
+diff -r 18fd959b07ef -r 16480f478dc1 runtime/doc/editing.txt
+--- a/runtime/doc/editing.txt	Wed Aug 13 22:05:54 2014 +0200
++++ b/runtime/doc/editing.txt	Sat Aug 16 12:18:53 2014 +0100
+@@ -619,7 +619,8 @@
+ 				:argadd x	a b x c
+ 				:0argadd x	x a b c
+ 				:1argadd x	a x b c
+-				:99argadd x	a b c x
++				:$argadd x	a b c x
++				:+2aradd y	a b c x y
+ 			There is no check for duplicates, it is possible to
+ 			add a file to the argument list twice.
+ 			The currently edited file is not changed.
+@@ -641,11 +642,19 @@
+ <			{not in Vi} {not available when compiled without the
+ 			|+listcmds| feature}
+ 
+-:{range}argd[elete]	Delete the {range} files from the argument list.
++:[count]argd[elete]
++:[range]argd[elete]	Delete the {range} files from the argument list.
+ 			When the last number in the range is too high, up to
+ 			the last argument is deleted.  Example: >
+-				:10,1000argdel
+-<			Deletes arguments 10 and further, keeping 1-9.
++				:10,$argdel
++<			Deletes arguments 10 and further, keeping 1-9. >
++				:$argd
++<			Deletes just the last one. >
++				:argd
++				:.argd
++<			Deletes the current argument. >
++				:%argd
++<			Removes all the files from the arglist.
+ 			{not in Vi} {not available when compiled without the
+ 			|+listcmds| feature}
+ 
+diff -r 18fd959b07ef -r 16480f478dc1 runtime/doc/windows.txt
+--- a/runtime/doc/windows.txt	Wed Aug 13 22:05:54 2014 +0200
++++ b/runtime/doc/windows.txt	Sat Aug 16 12:18:53 2014 +0100
+@@ -265,26 +265,40 @@
+ 
+ CTRL-W q						*CTRL-W_q*
+ CTRL-W CTRL-Q						*CTRL-W_CTRL-Q*
+-:q[uit]		Quit current window.  When quitting the last window (not
+-		counting a help window), exit Vim.
+-		When 'hidden' is set, and there is only one window for the
+-		current buffer, it becomes hidden.
+-		When 'hidden' is not set, and there is only one window for the
+-		current buffer, and the buffer was changed, the command fails.
+-		(Note: CTRL-Q does not work on all terminals)
+-
+-:q[uit]!	Quit current window.  If this was the last window for a buffer,
++:[count]q[uit]	Quit current window if [count] is not given, otherwise close
++		window with window number equal to [count].  When quitting the
++		last window (not counting a help window), exit Vim.  When
++		'hidden' is set, and there is only one window for the current
++		buffer, it becomes hidden.  When 'hidden' is not set, and
++		there is only one window for the current buffer, and the
++		buffer was changed, the command fails.  (Note: CTRL-Q does not
++		work on all terminals).  If [count] is greater than
++		the last window number the last window will be closed: >
++		    :1quit  " quit the first window
++		    :$quit  " quit the last window
++		    :9quit  " quit the last window
++			     " if there are less than 9 windows opened
++		    :-quit  " quit the previews window
++		    :+quit  " quit the next window
++		    :+2quit " will also work as expected
++<
++:[count]q[uit]!	Quit current window, unless [count] is given.  For [count] see
++		|:quit| command.  If this was the last window for a buffer,
+ 		any changes to that buffer are lost.  When quitting the last
+ 		window (not counting help windows), exit Vim.  The contents of
+ 		the buffer are lost, even when 'hidden' is set.
+ 
+ CTRL-W c					*CTRL-W_c* *:clo* *:close*
+-:clo[se][!]	Close current window.  When the 'hidden' option is set, or
+-		when the buffer was changed and the [!] is used, the buffer
+-		becomes hidden (unless there is another window editing it).
+-		When there is only one window in the current tab page and
+-		there is another tab page, this closes the current tab page.
++:[count]clo[se][!]
++		Close current window if [count] is not given, otherwise close
++		window with window number equal to [count].  For [count] see
++		|:quit| command.  When the 'hidden' option is set, or when the
++		buffer was changed and the [!] is used, the buffer becomes
++		hidden (unless there is another window editing it).  When
++		there is only one window in the current tab page and there is
++		another tab page, this closes the current tab page.
+ 		|tab-page|.
++
+ 		This command fails when:			*E444*
+ 		- There is only one window on the screen.
+ 		- When 'hidden' is not set, [!] is not used, the buffer has
+@@ -298,14 +312,14 @@
+ 		command.
+ 
+ 							*:hide*
+-:hid[e]		Quit current window, unless it is the last window on the
+-		screen.  The buffer becomes hidden (unless there is another
+-		window editing it or 'bufhidden' is "unload" or "delete").
+-		If the window is the last one in the current tab page the tab
+-		page is closed. |tab-page|
+-		The value of 'hidden' is irrelevant for this command.
+-		Changes to the buffer are not written and won't get lost, so
+-		this is a "safe" command.
++:[count]hid[e]	Quit current window, unless it is the last window on the
++		screen.  For [count] see |:quit| command. The buffer becomes
++		hidden (unless there is another window editing it or
++		'bufhidden' is "unload" or "delete").  If the window is the
++		last one in the current tab page the tab page is closed.
++		|tab-page| The value of 'hidden' is irrelevant for this
++		command.  Changes to the buffer are not written and won't get
++		lost, so this is a "safe" command.
+ 
+ :hid[e] {cmd}	Execute {cmd} with 'hidden' is set.  The previous value of
+ 		'hidden' is restored after {cmd} has been executed.
+@@ -316,15 +330,16 @@
+ 
+ CTRL-W o						*CTRL-W_o* *E445*
+ CTRL-W CTRL-O					*CTRL-W_CTRL-O* *:on* *:only*
+-:on[ly][!]	Make the current window the only one on the screen.  All other
+-		windows are closed.
+-		When the 'hidden' option is set, all buffers in closed windows
+-		become hidden.
+-		When 'hidden' is not set, and the 'autowrite' option is set,
+-		modified buffers are written.  Otherwise, windows that have
+-		buffers that are modified are not removed, unless the [!] is
+-		given, then they become hidden.  But modified buffers are
+-		never abandoned, so changes cannot get lost.
++:[count]on[ly][!]
++		Make the current window the only one on the screen.  All other
++		windows are closed.  For [count] see |:quit| command.  When
++		the 'hidden' option is set, all buffers in closed windows
++		become hidden.  When 'hidden' is not set, and the 'autowrite'
++		option is set, modified buffers are written.  Otherwise,
++		windows that have buffers that are modified are not removed,
++		unless the [!] is given, then they become hidden.  But
++		modified buffers are never abandoned, so changes cannot get
++		lost.
+ 
+ ==============================================================================
+ 4. Moving cursor to other windows			*window-move-cursor*
+diff -r 18fd959b07ef -r 16480f478dc1 src/Makefile
+--- a/src/Makefile	Wed Aug 13 22:05:54 2014 +0200
++++ b/src/Makefile	Sat Aug 16 12:18:53 2014 +0100
+@@ -1907,7 +1907,8 @@
+ 	test70 test71 test72 test73 test74 test75 test76 test77 test78 test79 \
+ 	test80 test81 test82 test83 test84 test85 test86 test87 test88 test89 \
+ 	test90 test91 test92 test93 test94 test95 test96 test97 test98 test99 \
+-	test100 test101 test102 test103 test104 test105 test106 test107:
++	test100 test101 test102 test103 test104 test105 test106 test107 test108 \
++	test109:
+ 	cd testdir; rm $@.out; $(MAKE) -f Makefile $@.out VIMPROG=../$(VIMTARGET) $(GUI_TESTARG) SCRIPTSOURCE=../$(SCRIPTSOURCE)
+ 
+ testclean:
+diff -r 18fd959b07ef -r 16480f478dc1 src/ex_cmds.h
+--- a/src/ex_cmds.h	Wed Aug 13 22:05:54 2014 +0200
++++ b/src/ex_cmds.h	Sat Aug 16 12:18:53 2014 +0100
+@@ -232,7 +232,7 @@
+ EX(CMD_clast,		"clast",	ex_cc,
+ 			RANGE|NOTADR|COUNT|TRLBAR|BANG),
+ EX(CMD_close,		"close",	ex_close,
+-			BANG|TRLBAR|CMDWIN),
++			BANG|RANGE|NOTADR|COUNT|TRLBAR|CMDWIN),
+ EX(CMD_cmap,		"cmap",		ex_map,
+ 			EXTRA|TRLBAR|NOTRLCOM|USECTRLV|CMDWIN),
+ EX(CMD_cmapclear,	"cmapclear",	ex_mapclear,
+@@ -428,7 +428,7 @@
+ EX(CMD_highlight,	"highlight",	ex_highlight,
+ 			BANG|EXTRA|TRLBAR|SBOXOK|CMDWIN),
+ EX(CMD_hide,		"hide",		ex_hide,
+-			BANG|EXTRA|NOTRLCOM),
++			BANG|RANGE|NOTADR|COUNT|EXTRA|NOTRLCOM),
+ EX(CMD_history,		"history",	ex_history,
+ 			EXTRA|TRLBAR|CMDWIN),
+ EX(CMD_insert,		"insert",	ex_append,
+@@ -676,7 +676,7 @@
+ EX(CMD_omenu,		"omenu",	ex_menu,
+ 			RANGE|NOTADR|ZEROR|EXTRA|TRLBAR|NOTRLCOM|USECTRLV|CMDWIN),
+ EX(CMD_only,		"only",		ex_only,
+-			BANG|TRLBAR),
++			BANG|NOTADR|RANGE|COUNT|TRLBAR),
+ EX(CMD_onoremap,	"onoremap",	ex_map,
+ 			EXTRA|TRLBAR|NOTRLCOM|USECTRLV|CMDWIN),
+ EX(CMD_onoremenu,	"onoremenu",	ex_menu,
+@@ -756,7 +756,7 @@
+ EX(CMD_py3file,		"py3file",	ex_py3file,
+ 			RANGE|FILE1|NEEDARG|CMDWIN),
+ EX(CMD_quit,		"quit",		ex_quit,
+-			BANG|TRLBAR|CMDWIN),
++			BANG|RANGE|COUNT|NOTADR|TRLBAR|CMDWIN),
+ EX(CMD_quitall,		"quitall",	ex_quit_all,
+ 			BANG|TRLBAR),
+ EX(CMD_qall,		"qall",		ex_quit_all,
+@@ -1206,3 +1206,13 @@
+ #define EXFLAG_PRINT	0x04	/* 'p': print */
+ 
+ #endif
++
++#define ADDRT_ABSOLUTE	0x001	/* number */
++#define ADDRT_CURPOS	0x002	/* '.' */
++#define ADDRT_LAST	0x004	/* '$' */
++#define ADDRT_MARK	0x010	/* "'" */
++#define ADDRT_SEARCH	0x020	/* '/' or '?' */
++#define ADDRT_REPEAT	0x040	/* "\?", "\/" or "\&" */
++#define ADDRT_LOCAL	0x100	/* '+[linenr], or -[linenr]' */
++#define ADDRT_ALL	0x200	/* '%' */
++#define ADDRT_VISUAL	0x400	/* '*' */
+diff -r 18fd959b07ef -r 16480f478dc1 src/ex_docmd.c
+--- a/src/ex_docmd.c	Wed Aug 13 22:05:54 2014 +0200
++++ b/src/ex_docmd.c	Sat Aug 16 12:18:53 2014 +0100
+@@ -128,7 +128,7 @@
+ #endif
+ 
+ static int	check_more __ARGS((int, int));
+-static linenr_T get_address __ARGS((char_u **, int skip, int to_other_file));
++static addr_T get_address __ARGS((char_u **, int skip, int to_other_file));
+ static void	get_flags __ARGS((exarg_T *eap));
+ #if !defined(FEAT_PERL) \
+ 	|| !defined(FEAT_PYTHON) || !defined(FEAT_PYTHON3) \
+@@ -1675,6 +1675,7 @@
+ }
+ #endif
+ 
++
+ /*
+  * Execute one Ex command.
+  *
+@@ -1712,6 +1713,7 @@
+     void		*cookie;		/* argument for fgetline() */
+ {
+     char_u		*p;
++    addr_T		addr1, addr2;
+     linenr_T		lnum;
+     long		n;
+     char_u		*errormsg = NULL;	/* error message */
+@@ -1725,6 +1727,8 @@
+ #endif
+     cmdmod_T		save_cmdmod;
+     int			ni;			/* set when Not Implemented */
++    win_T		*wp;
++    char_u		c;
+ 
+     vim_memset(&ea, 0, sizeof(ea));
+     ea.line1 = 1;
+@@ -2020,10 +2024,11 @@
+ 	ea.line1 = ea.line2;
+ 	ea.line2 = curwin->w_cursor.lnum;   /* default is current line number */
+ 	ea.cmd = skipwhite(ea.cmd);
+-	lnum = get_address(&ea.cmd, ea.skip, ea.addr_count == 0);
++	addr1 = addr2;
++	addr2 = get_address(&ea.cmd, ea.skip, ea.addr_count == 0);
+ 	if (ea.cmd == NULL)		    /* error detected */
+ 	    goto doend;
+-	if (lnum == MAXLNUM)
++	if (addr2.lnum == MAXLNUM)
+ 	{
+ 	    if (*ea.cmd == '%')		    /* '%' - all lines */
+ 	    {
+@@ -2031,6 +2036,7 @@
+ 		ea.line1 = 1;
+ 		ea.line2 = curbuf->b_ml.ml_line_count;
+ 		++ea.addr_count;
++		addr2.type |= ADDRT_ALL;
+ 	    }
+ 					    /* '*' - visual area */
+ 	    else if (*ea.cmd == '*' && vim_strchr(p_cpo, CPO_STAR) == NULL)
+@@ -2053,7 +2059,7 @@
+ 	    }
+ 	}
+ 	else
+-	    ea.line2 = lnum;
++	    ea.line2 = addr2.lnum;
+ 	ea.addr_count++;
+ 
+ 	if (*ea.cmd == ';')
+@@ -2069,9 +2075,10 @@
+     /* One address given: set start and end lines */
+     if (ea.addr_count == 1)
+     {
++	addr1 = addr2;
+ 	ea.line1 = ea.line2;
+ 	    /* ... but only implicit: really no address given */
+-	if (lnum == MAXLNUM)
++	if (addr2.lnum == MAXLNUM)
+ 	    ea.addr_count = 0;
+     }
+ 
+@@ -2170,6 +2177,167 @@
+ 	goto doend;
+     }
+ 
++    /*
++     * For some commands addr might be used not as a line number
++     */
++    switch(ea.cmdidx)
++    {
++	case CMD_close:
++	case CMD_hide:
++	case CMD_only:
++	case CMD_quit:
++	    if (ea.addr_count == 0)
++		break;
++	    if (    addr2.type & ADDRT_MARK ||
++		    addr2.type & ADDRT_SEARCH ||
++		    addr2.type & ADDRT_REPEAT ||
++		    addr2.type & ADDRT_ALL ||
++		    addr2.type & ADDRT_VISUAL)
++	    {
++		/* emit E16 */
++		errormsg = (char_u *)_(e_invrange);
++		goto doend;
++	    }
++	    if (addr2.type & ADDRT_LAST)
++	    {
++		lnum = 0;
++		for (wp = firstwin; wp != NULL; wp = wp->w_next)
++		    lnum++;
++		if (addr2.type & ADDRT_LOCAL)
++		{
++		    lnum += addr2.local;
++		    /* avoid E16 if address is negative */
++		    if (lnum <= 0)
++			lnum = 1;
++		}
++		ea.line1 = ea.line2 = addr2.lnum = lnum;
++	    }
++	    else if ((addr2.type & ADDRT_LOCAL || addr2.type & ADDRT_CURPOS) &&
++		    !(addr2.type & ADDRT_ABSOLUTE))
++	    {
++		lnum = 0;
++		for (wp = firstwin; wp != NULL; wp = wp->w_next)
++		{
++		    lnum++;
++		    if (wp == curwin)
++			break;
++		}
++		if (addr2.type & ADDRT_LOCAL)
++		{
++		    lnum = lnum + addr2.local;
++		    /* avoid E16 if address is negative */
++		    if (lnum <= 0)
++			lnum = 1;
++		}
++		ea.line1 = ea.line2 = addr2.lnum = lnum;
++	    }
++	    break;
++	case CMD_argument:
++	case CMD_sargument:
++	case CMD_argadd:
++	case CMD_argedit:
++	    if (ea.addr_count == 0)
++		break;
++	    if (addr2.type & ADDRT_MARK ||
++		    addr2.type & ADDRT_SEARCH ||
++		    addr2.type & ADDRT_REPEAT ||
++		    addr2.type & ADDRT_ALL ||
++		    addr2.type & ADDRT_VISUAL)
++	    {
++		/* emit E16 */
++		errormsg = (char_u *)_(e_invrange);
++		goto doend;
++	    }
++	    else if (addr2.type & ADDRT_LAST)
++		addr2.lnum = ARGCOUNT;
++	    else if (!(addr2.type & ADDRT_ABSOLUTE)) {
++		addr2.lnum = curwin->w_arg_idx + 1;
++	    }
++
++	    if (addr2.type & ADDRT_LOCAL)
++	    {
++		addr2.lnum += addr2.local;
++		/* avoid E16 if address is negative */
++		if (addr2.lnum < 0)
++		    addr2.lnum = 0;
++		if (addr2.lnum > ARGCOUNT)
++		    addr2.lnum = ARGCOUNT;
++	    }
++	    ea.line1 = ea.line2 = addr2.lnum;
++	    break;
++	case CMD_argdelete:
++	    if (ea.addr_count > 1) {
++		if (addr1.type & ADDRT_MARK ||
++			addr1.type & ADDRT_SEARCH ||
++			addr1.type & ADDRT_REPEAT ||
++			addr1.type & ADDRT_ALL ||
++			addr1.type & ADDRT_VISUAL)
++		{
++		    /* emit E16 */
++		    errormsg = (char_u *)_(e_invrange);
++		    goto doend;
++		}
++		else if (addr1.type & ADDRT_LAST)	/* :$,$argdlete */
++		    addr1.lnum = ARGCOUNT;
++		else if (!(addr1.type & ADDRT_ABSOLUTE)) /* :.,$argdelete, :-5,$argdelete */
++		    addr1.lnum = curwin->w_arg_idx + 1;
++		if (addr1.type & ADDRT_LOCAL)
++		{
++		    addr1.lnum += addr1.local;
++		    /* avoid E16 if address is negative */
++		    if (addr1.lnum <= 0)
++			addr1.lnum = 1;
++		    if (addr1.lnum > ARGCOUNT)
++			addr1.lnum = ARGCOUNT;
++		}
++		ea.line1 = addr1.lnum;
++	    }
++
++	    c = skipwhite(p)[0];
++	    if (ea.addr_count > 0)
++	    {
++		if (addr2.type & ADDRT_MARK ||
++			addr2.type & ADDRT_SEARCH ||
++			addr2.type & ADDRT_REPEAT ||
++			addr2.type & ADDRT_VISUAL)
++		{
++		    /* emit E16 */
++		    errormsg = (char_u *)_(e_invrange);
++		    goto doend;
++		}
++		else if (addr2.type & ADDRT_ALL) {  /* :%argdelete */
++		    ea.line1 = 1;
++		    addr2.lnum = ARGCOUNT;
++		}
++		else if (addr2.type & ADDRT_LAST)   /* :1,$argdlete */
++		    addr2.lnum = ARGCOUNT;
++		else if (!(addr2.type & ADDRT_ABSOLUTE))
++		    addr2.lnum = curwin->w_arg_idx + 1;
++		if (addr2.type & ADDRT_LOCAL)	/* :1,$-3argdelete */
++		{
++		    addr2.lnum += addr2.local;
++		    /* avoid E16 if address is negative */
++		    if (addr2.lnum <= 0)
++			addr2.lnum = 1;
++		    if (addr2.lnum > ARGCOUNT)
++			addr2.lnum = ARGCOUNT;
++		}
++		ea.line2 = addr2.lnum;
++	    }
++	    else if (c == '\0' || c == '|')    /* expand :argdelete to :.argdelete */
++	    {
++		ea.line2 = addr2.lnum = curwin->w_arg_idx + 1;
++		ea.addr_count = 1;
++	    }
++
++	    if (ea.addr_count <= 1) /* expand :Nargdelete to :N,Nargdelete */
++	    {
++		addr1 = addr2;
++		ea.line1 = ea.line2;
++	    }
++	    break;
++    }
++
+     ni = (
+ #ifdef FEAT_USR_CMDS
+ 	    !USER_CMDIDX(ea.cmdidx) &&
+@@ -3338,7 +3506,7 @@
+ 	++p;
+     }
+ 
+-/*
++/*.
+  * 5. parse arguments
+  */
+ #ifdef FEAT_USR_CMDS
+@@ -4082,7 +4250,7 @@
+  *
+  * Return MAXLNUM when no Ex address was found.
+  */
+-    static linenr_T
++    static addr_T
+ get_address(ptr, skip, to_other_file)
+     char_u	**ptr;
+     int		skip;	    /* only skip the address, don't use it */
+@@ -4094,22 +4262,26 @@
+     char_u	*cmd;
+     pos_T	pos;
+     pos_T	*fp;
+-    linenr_T	lnum;
++    addr_T	addr;
+ 
+     cmd = skipwhite(*ptr);
+-    lnum = MAXLNUM;
++    addr.lnum = MAXLNUM;
++    addr.local = 0;
++    addr.type = 0;
+     do
+     {
+ 	switch (*cmd)
+ 	{
+ 	    case '.':			    /* '.' - Cursor position */
+ 			++cmd;
+-			lnum = curwin->w_cursor.lnum;
++			addr.lnum = curwin->w_cursor.lnum;
++			addr.type = ADDRT_CURPOS;
+ 			break;
+ 
+ 	    case '$':			    /* '$' - last line */
+ 			++cmd;
+-			lnum = curbuf->b_ml.ml_line_count;
++			addr.lnum = curbuf->b_ml.ml_line_count;
++			addr.type = ADDRT_LAST;
+ 			break;
+ 
+ 	    case '\'':			    /* ''' - mark */
+@@ -4126,9 +4298,10 @@
+ 			     * used by itself: ":'M". */
+ 			    fp = getmark(*cmd, to_other_file && cmd[1] == NUL);
+ 			    ++cmd;
++			    addr.type = ADDRT_MARK;
+ 			    if (fp == (pos_T *)-1)
+ 				/* Jumped to another file. */
+-				lnum = curwin->w_cursor.lnum;
++				addr.lnum = curwin->w_cursor.lnum;
+ 			    else
+ 			    {
+ 				if (check_mark(fp) == FAIL)
+@@ -4136,7 +4309,7 @@
+ 				    cmd = NULL;
+ 				    goto error;
+ 				}
+-				lnum = fp->lnum;
++				addr.lnum = fp->lnum;
+ 			    }
+ 			}
+ 			break;
+@@ -4157,8 +4330,8 @@
+ 			     * When '/' or '?' follows another address, start
+ 			     * from there.
+ 			     */
+-			    if (lnum != MAXLNUM)
+-				curwin->w_cursor.lnum = lnum;
++			    if (addr.lnum != MAXLNUM)
++				curwin->w_cursor.lnum = addr.lnum;
+ 			    /*
+ 			     * Start a forward search at the end of the line.
+ 			     * Start a backward search at the start of the line.
+@@ -4178,7 +4351,8 @@
+ 				cmd = NULL;
+ 				goto error;
+ 			    }
+-			    lnum = curwin->w_cursor.lnum;
++			    addr.lnum = curwin->w_cursor.lnum;
++			    addr.type = ADDRT_SEARCH;
+ 			    curwin->w_cursor = pos;
+ 			    /* adjust command string pointer */
+ 			    cmd += searchcmdlen;
+@@ -4204,8 +4378,9 @@
+ 			     * When search follows another address, start from
+ 			     * there.
+ 			     */
+-			    if (lnum != MAXLNUM)
+-				pos.lnum = lnum;
++			    addr.type = ADDRT_REPEAT;
++			    if (addr.lnum != MAXLNUM)
++				pos.lnum = addr.lnum;
+ 			    else
+ 				pos.lnum = curwin->w_cursor.lnum;
+ 
+@@ -4221,7 +4396,7 @@
+ 					*cmd == '?' ? BACKWARD : FORWARD,
+ 					(char_u *)"", 1L, SEARCH_MSG,
+ 						i, (linenr_T)0, NULL) != FAIL)
+-				lnum = pos.lnum;
++				addr.lnum = pos.lnum;
+ 			    else
+ 			    {
+ 				cmd = NULL;
+@@ -4233,7 +4408,10 @@
+ 
+ 	    default:
+ 			if (VIM_ISDIGIT(*cmd))	/* absolute line number */
+-			    lnum = getdigits(&cmd);
++			{
++			    addr.lnum = getdigits(&cmd);
++			    addr.type = ADDRT_ABSOLUTE;
++			}
+ 	}
+ 
+ 	for (;;)
+@@ -4242,8 +4420,9 @@
+ 	    if (*cmd != '-' && *cmd != '+' && !VIM_ISDIGIT(*cmd))
+ 		break;
+ 
+-	    if (lnum == MAXLNUM)
+-		lnum = curwin->w_cursor.lnum;	/* "+1" is same as ".+1" */
++	    addr.type |= ADDRT_LOCAL;
++	    if (addr.lnum == MAXLNUM)
++		addr.lnum = curwin->w_cursor.lnum;	/* "+1" is same as ".+1" */
+ 	    if (VIM_ISDIGIT(*cmd))
+ 		i = '+';		/* "number" is same as "+number" */
+ 	    else
+@@ -4253,15 +4432,21 @@
+ 	    else
+ 		n = getdigits(&cmd);
+ 	    if (i == '-')
+-		lnum -= n;
++	    {
++		addr.lnum -= n;
++		addr.local -= n;
++	    }
+ 	    else
+-		lnum += n;
++	    {
++		addr.lnum += n;
++		addr.local += n;
++	    }
+ 	}
+     } while (*cmd == '/' || *cmd == '?');
+ 
+ error:
+     *ptr = cmd;
+-    return lnum;
++    return addr;
+ }
+ 
+ /*
+@@ -6545,6 +6730,11 @@
+ ex_quit(eap)
+     exarg_T	*eap;
+ {
++    win_T	*wp;
++    win_T	*cwp;
++    buf_T	*buf;
++    int		wnr;
++
+ #ifdef FEAT_CMDWIN
+     if (cmdwin_type != 0)
+     {
+@@ -6558,11 +6748,28 @@
+ 	text_locked_msg();
+ 	return;
+     }
++    if (eap->addr_count > 0)
++    {
++	wnr = eap->line2;
++	for (wp = firstwin; --wnr > 0; )
++	{
++	    if (wp->w_next == NULL)
++		break;
++	    else
++		wp = wp->w_next;
++	}
++	buf = wp->w_buffer;
++    }
++    else
++    {
++	wp = curwin;
++	buf = curbuf;
++    }
+ #ifdef FEAT_AUTOCMD
+     apply_autocmds(EVENT_QUITPRE, NULL, NULL, FALSE, curbuf);
+     /* Refuse to quit when locked or when the buffer in the last window is
+      * being closed (can only happen in autocommands). */
+-    if (curbuf_locked() || (curbuf->b_nwindows == 1 && curbuf->b_closing))
++    if (curbuf_locked() || (buf->b_nwindows == 1 && buf->b_closing))
+ 	return;
+ #endif
+ 
+@@ -6595,7 +6802,7 @@
+ 	need_mouse_correct = TRUE;
+ # endif
+ 	/* close window; may free buffer */
+-	win_close(curwin, !P_HID(curwin->w_buffer) || eap->forceit);
++	win_close(wp, !P_HID(wp->w_buffer) || eap->forceit);
+ #endif
+     }
+ }
+@@ -6657,6 +6864,8 @@
+ ex_close(eap)
+     exarg_T	*eap;
+ {
++    win_T	*win;
++    int		winnr = 0;
+ # ifdef FEAT_CMDWIN
+     if (cmdwin_type != 0)
+ 	cmdwin_result = Ctrl_C;
+@@ -6667,7 +6876,21 @@
+ 		&& !curbuf_locked()
+ #endif
+ 		)
+-	    ex_win_close(eap->forceit, curwin, NULL);
++	{
++	    if (eap->addr_count == 0)
++		ex_win_close(eap->forceit, curwin, NULL);
++	    else {
++		for (win = firstwin; win != NULL; win = win->w_next)
++		{
++		    winnr++;
++		    if (winnr == eap->line2)
++			break;
++		}
++		if (win == NULL)
++		    win = lastwin;
++		ex_win_close(eap->forceit, win, NULL);
++	    }
++	}
+ }
+ 
+ # ifdef FEAT_QUICKFIX
+@@ -6871,9 +7094,23 @@
+ ex_only(eap)
+     exarg_T	*eap;
+ {
++    win_T   *wp;
++    int	    wnr;
+ # ifdef FEAT_GUI
+     need_mouse_correct = TRUE;
+ # endif
++    if (eap->addr_count > 0)
++    {
++	wnr = eap->line2;
++	for (wp = firstwin; --wnr > 0; )
++	{
++	    if (wp->w_next == NULL)
++		break;
++	    else
++		wp = wp->w_next;
++	}
++	win_goto(wp);
++    }
+     close_others(TRUE, eap->forceit);
+ }
+ 
+@@ -6895,6 +7132,9 @@
+ ex_hide(eap)
+     exarg_T	*eap;
+ {
++    win_T	*win;
++    int		winnr = 0;
++
+     if (*eap->arg != NUL && check_nextcmd(eap->arg) == NULL)
+ 	eap->errmsg = e_invarg;
+     else
+@@ -6907,7 +7147,19 @@
+ # ifdef FEAT_GUI
+ 	    need_mouse_correct = TRUE;
+ # endif
+-	    win_close(curwin, FALSE);	/* don't free buffer */
++	    if (eap->addr_count == 0)
++		win_close(curwin, FALSE);	/* don't free buffer */
++	    else {
++		for (win = firstwin; win != NULL; win = win->w_next)
++		{
++		    winnr++;
++		    if (winnr == eap->line2)
++			break;
++		}
++		if (win == NULL)
++		    win = lastwin;
++		win_close(win, FALSE);
++	    }
+ 	}
+ #endif
+     }
+@@ -8639,9 +8891,9 @@
+ ex_copymove(eap)
+     exarg_T	*eap;
+ {
+-    long	n;
+-
+-    n = get_address(&eap->arg, FALSE, FALSE);
++    addr_T	addr;
++
++    addr = get_address(&eap->arg, FALSE, FALSE);
+     if (eap->arg == NULL)	    /* error detected */
+     {
+ 	eap->nextcmd = NULL;
+@@ -8650,9 +8902,10 @@
+     get_flags(eap);
+ 
+     /*
+-     * move or copy lines from 'eap->line1'-'eap->line2' to below line 'n'
++     * move or copy lines from 'eap->line1'-'eap->line2' to below line
++     * 'addr.lnum'
+      */
+-    if (n == MAXLNUM || n < 0 || n > curbuf->b_ml.ml_line_count)
++    if (addr.lnum == MAXLNUM || addr.lnum < 0 || addr.lnum > curbuf->b_ml.ml_line_count)
+     {
+ 	EMSG(_(e_invaddr));
+ 	return;
+@@ -8660,11 +8913,11 @@
+ 
+     if (eap->cmdidx == CMD_move)
+     {
+-	if (do_move(eap->line1, eap->line2, n) == FAIL)
++	if (do_move(eap->line1, eap->line2, addr.lnum) == FAIL)
+ 	    return;
+     }
+     else
+-	ex_copy(eap->line1, eap->line2, n);
++	ex_copy(eap->line1, eap->line2, addr.lnum);
+     u_clearline();
+     beginline(BL_SOL | BL_FIX);
+     ex_may_print(eap);
+diff -r 18fd959b07ef -r 16480f478dc1 src/structs.h
+--- a/src/structs.h	Wed Aug 13 22:05:54 2014 +0200
++++ b/src/structs.h	Sat Aug 16 12:18:53 2014 +0100
+@@ -21,6 +21,16 @@
+ #endif
+ 
+ /*
++ *
++ */
++typedef struct
++{
++    linenr_T	lnum;	/* addr */
++    linenr_T	local;	/* addr from + and - modifiers */
++    int		type;	/* */
++} addr_T;
++
++/*
+  * position in file or buffer
+  */
+ typedef struct
+diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test108.in
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/testdir/test108.in	Sat Aug 16 12:18:53 2014 +0100
+@@ -0,0 +1,153 @@
++Tests for :[count]close! and :[count]hide     vim: set ft=vim :
++
++STARTTEST
++:let tests = []
++:so tiny.vim
++:for i in range(5)
++:new
++:endfor
++:4wincmd w
++:close!
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:1close!
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:$close!
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:1wincmd w
++:2close!
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:1wincmd w
++:new
++:new
++:3wincmd w
++:-2close
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:2wincmd w
++:+1close
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:e! test.out
++:call append(0, map(copy(tests), 'join(v:val, " ")'))
++:w
++:only!
++:b1
++ENDTEST
++
++STARTTEST
++:let tests = []
++:so tiny.vim
++:for i in range(5)
++:new
++:endfor
++:4wincmd w
++:.hide
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:1hide
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:9hide
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:1wincmd w
++:2hide
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:1wincmd w
++:new
++:new
++:3wincmd w
++:-hide
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:2wincmd w
++:+hide
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:e! test.out
++:call append(line('$'), map(copy(tests), 'join(v:val, " ")'))
++Go
++:w
++:only!
++:b1
++ENDTEST
++
++STARTTEST
++:let tests = []
++:so tiny.vim
++:set hidden
++:for i in range(5)
++:new
++:endfor
++:1wincmd w
++:$ hide
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:$-1 close!
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:1wincmd w
++:.+close!
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:e! test.out
++:call append(line('$'), map(copy(tests), 'join(v:val, " ")'))
++Go
++:w
++:only!
++:b1
++ENDTEST
++
++STARTTEST
++:let tests = []
++:so tiny.vim
++:set hidden
++:for i in range(5)
++:new
++:endfor
++:4wincmd w
++c
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++1c
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++9c
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:1wincmd w
++2c
++:let buffers = []
++:windo call add(buffers, bufnr('%'))
++:call add(tests, buffers)
++:only!
++:e! test.out
++:call append(line('$'), map(copy(tests), 'join(v:val, " ")'))
++:w
++:qa!
++ENDTEST
++
++
+diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test108.ok
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/testdir/test108.ok	Sat Aug 16 12:18:53 2014 +0100
+@@ -0,0 +1,22 @@
++6 5 4 2 1
++5 4 2 1
++5 4 2
++5 2
++7 5 2
++7 5
++
++13 12 11 9 1
++12 11 9 1
++12 11 9
++12 9
++15 12 9
++15 12
++
++20 19 18 17 16
++20 19 18 16
++20 18 16
++
++25 24 23 21 1
++24 23 21 1
++24 23 21
++24 21
+diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test109.in
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/testdir/test109.in	Sat Aug 16 12:18:53 2014 +0100
+@@ -0,0 +1,47 @@
++Tests for :[count]argument! and :[count]argdelete     vim: set ft=vim :
++
++STARTTEST
++:%argd
++:argadd a b c d
++:set hidden
++:let buffers = []
++:augroup TEST
++:au BufEnter * call add(buffers, expand('%:t'))
++:augroup END
++:$argu
++:$-argu
++:-argu
++:1argu
++:+2argu
++:augroup TEST
++:au!
++:augroup END
++:let arglists = []
++:.argd
++:call add(arglists, argv())
++:-argd
++:call add(arglists, argv())
++:$argd
++:call add(arglists, argv())
++:1arga c
++:1arga b
++:$argu
++:+arga d
++:$arga x
++:call add(arglists, argv())
++:$-10arga Y
++:call add(arglists, argv())
++:%argd
++:call add(arglists, argv())
++:arga a b c d e f
++:2,$-argd
++:call add(arglists, argv())
++:e! test.out
++:call append(0, buffers)
++:let lnr = line('$')
++:call append(lnr, map(copy(arglists), 'join(v:val, " ")'))
++:w
++:qa!
++ENDTEST
++
++
+diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test109.ok
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/testdir/test109.ok	Sat Aug 16 12:18:53 2014 +0100
+@@ -0,0 +1,13 @@
++d
++c
++b
++a
++c
++
++a b d
++a d
++a
++a b c d x
++Y a b c d x
++
++a f
+diff -r 18fd959b07ef -r 16480f478dc1 src/window.c
+--- a/src/window.c	Wed Aug 13 22:05:54 2014 +0200
++++ b/src/window.c	Sat Aug 16 12:18:53 2014 +0100
+@@ -199,14 +199,22 @@
+     case Ctrl_Q:
+     case 'q':
+ 		reset_VIsual_and_resel();	/* stop Visual mode */
+-		do_cmdline_cmd((char_u *)"quit");
++		STRCPY(cbuf, "quit");
++		if (Prenum)
++		    vim_snprintf((char *)cbuf + 4, sizeof(cbuf) - 5,
++							    "%ld", Prenum);
++		do_cmdline_cmd(cbuf);
+ 		break;
+ 
+ /* close current window */
+     case Ctrl_C:
+     case 'c':
+ 		reset_VIsual_and_resel();	/* stop Visual mode */
+-		do_cmdline_cmd((char_u *)"close");
++		STRCPY(cbuf, "close");
++		if (Prenum)
++		    vim_snprintf((char *)cbuf + 5, sizeof(cbuf) - 5,
++							       "%ld", Prenum);
++		do_cmdline_cmd(cbuf);
+ 		break;
+ 
+ #if defined(FEAT_WINDOWS) && defined(FEAT_QUICKFIX)
+@@ -235,7 +243,11 @@
+     case 'o':
+ 		CHECK_CMDWIN
+ 		reset_VIsual_and_resel();	/* stop Visual mode */
+-		do_cmdline_cmd((char_u *)"only");
++		STRCPY(cbuf, "only");
++		if (Prenum > 0)
++		    vim_snprintf((char *)cbuf + 4, sizeof(cbuf) - 4,
++								"%ld", Prenum);
++		do_cmdline_cmd(cbuf);
+ 		break;
+ 
+ /* cursor to next window with wrap around */
