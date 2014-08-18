@@ -5,14 +5,14 @@ This repository contains vim patches that I use.  Most of them I wrote and they 
 
 `argadd.patch`
 --------------
-by Marcin Szamotulski
+by *Marcin Szamotulski*
 
 Add default argument to `:argadd` command:  `:argadd` will work like
 `:argadd%`.
 
 `arglists.patch`
 ----------------
-by Marcin Szamotulski
+by *Marcin Szamotulski*
 
 One of my patches, which was recenlty accepted (version `7.4.312`), adds
 `arglistid()` function which returns arglist `ID` (0 for global arglist).  This
@@ -22,7 +22,7 @@ lists in the current tab page (or all tab pages) with theirs IDs.
 
 `count.patch`
 ----------------
-by Marcin Szamotulski
+by *Marcin Szamotulski*
 
 This patch adds counts for `:close`, `Ctrl_Wc`, `:hide`, `Ctrl_Wq`, `:only`,
 `Ctrl_Wo`  ... commands (ex- and normal-).  For example `3<c-w>q` will quit
@@ -42,13 +42,13 @@ It also changes the count for `:argedit`, `:argument`, `:argdelete`:
 
 `buffer.patch`
 --------------
-by Marcin Szamotulski
+by *Marcin Szamotulski*
 
 This patch adds `+cmd` argument for `:buffer`, `:sbuffer`, `:bnext`,
 `:bprevious`, ... and all friends.  See `:help +cmd`.
 
 `color-digraph-list.patch`
 -------------------------
-by Dominique Pellé
+by *Dominique Pellé*
 
 Add colors to `:digraph` output, useful when searching for a digraph.
