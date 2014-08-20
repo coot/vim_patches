@@ -1,6 +1,6 @@
-diff -r 18fd959b07ef -r 6d08f064ec48 runtime/doc/editing.txt
+diff -r 18fd959b07ef -r b796af562df3 runtime/doc/editing.txt
 --- a/runtime/doc/editing.txt	Wed Aug 13 22:05:54 2014 +0200
-+++ b/runtime/doc/editing.txt	Wed Aug 20 22:31:55 2014 +0100
++++ b/runtime/doc/editing.txt	Thu Aug 21 00:16:25 2014 +0100
 @@ -619,7 +619,8 @@
  				:argadd x	a b x c
  				:0argadd x	x a b c
@@ -34,9 +34,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 runtime/doc/editing.txt
  			{not in Vi} {not available when compiled without the
  			|+listcmds| feature}
  
-diff -r 18fd959b07ef -r 6d08f064ec48 runtime/doc/windows.txt
+diff -r 18fd959b07ef -r b796af562df3 runtime/doc/windows.txt
 --- a/runtime/doc/windows.txt	Wed Aug 13 22:05:54 2014 +0200
-+++ b/runtime/doc/windows.txt	Wed Aug 20 22:31:55 2014 +0100
++++ b/runtime/doc/windows.txt	Thu Aug 21 00:16:25 2014 +0100
 @@ -265,26 +265,40 @@
  
  CTRL-W q						*CTRL-W_q*
@@ -141,9 +141,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 runtime/doc/windows.txt
  
  ==============================================================================
  4. Moving cursor to other windows			*window-move-cursor*
-diff -r 18fd959b07ef -r 6d08f064ec48 src/Makefile
+diff -r 18fd959b07ef -r b796af562df3 src/Makefile
 --- a/src/Makefile	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/Makefile	Wed Aug 20 22:31:55 2014 +0100
++++ b/src/Makefile	Thu Aug 21 00:16:25 2014 +0100
 @@ -1907,7 +1907,8 @@
  	test70 test71 test72 test73 test74 test75 test76 test77 test78 test79 \
  	test80 test81 test82 test83 test84 test85 test86 test87 test88 test89 \
@@ -154,9 +154,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/Makefile
  	cd testdir; rm $@.out; $(MAKE) -f Makefile $@.out VIMPROG=../$(VIMTARGET) $(GUI_TESTARG) SCRIPTSOURCE=../$(SCRIPTSOURCE)
  
  testclean:
-diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_cmds.h
+diff -r 18fd959b07ef -r b796af562df3 src/ex_cmds.h
 --- a/src/ex_cmds.h	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/ex_cmds.h	Wed Aug 20 22:31:55 2014 +0100
++++ b/src/ex_cmds.h	Thu Aug 21 00:16:25 2014 +0100
 @@ -232,7 +232,7 @@
  EX(CMD_clast,		"clast",	ex_cc,
  			RANGE|NOTADR|COUNT|TRLBAR|BANG),
@@ -207,10 +207,18 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_cmds.h
 +#define ADDRT_LOCAL	0x100	/* '+[linenr], or -[linenr]' */
 +#define ADDRT_ALL	0x200	/* '%' */
 +#define ADDRT_VISUAL	0x400	/* '*' */
-diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
+diff -r 18fd959b07ef -r b796af562df3 src/ex_docmd.c
 --- a/src/ex_docmd.c	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/ex_docmd.c	Wed Aug 20 22:31:55 2014 +0100
-@@ -128,7 +128,7 @@
++++ b/src/ex_docmd.c	Thu Aug 21 00:16:25 2014 +0100
+@@ -55,6 +55,7 @@
+ # define ex_delcommand	ex_ni
+ #endif
+ 
++static int	compute_count(addr_T *, linenr_T, linenr_T, linenr_T, int);
+ #ifdef FEAT_EVAL
+ static char_u	*do_one_cmd __ARGS((char_u **, int, struct condstack *, char_u *(*fgetline)(int, void *, int), void *cookie));
+ #else
+@@ -128,7 +129,7 @@
  #endif
  
  static int	check_more __ARGS((int, int));
@@ -219,15 +227,53 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  static void	get_flags __ARGS((exarg_T *eap));
  #if !defined(FEAT_PERL) \
  	|| !defined(FEAT_PYTHON) || !defined(FEAT_PYTHON3) \
-@@ -1675,6 +1675,7 @@
+@@ -1675,6 +1676,45 @@
  }
  #endif
  
++    static int
++compute_count(addr, first, current, last, addr_all)
++    addr_T	*addr;
++    linenr_T	first;
++    linenr_T	current;
++    linenr_T	last;
++    int		addr_all;
++{
++    if (addr->type & ADDRT_MARK ||
++	    addr->type & ADDRT_SEARCH ||
++	    addr->type & ADDRT_REPEAT ||
++	    addr->type & ADDRT_VISUAL ||
++	    addr->type & ADDRT_ALL && !addr_all)
++    {
++	return 0;
++    }
++    else if (addr->type & ADDRT_ALL && addr_all)
++    {
++	addr->lnum = (last > 0) ? last : 1;
++	return 2;
++    }
++    else if (addr->type & ADDRT_LAST)
++	addr->lnum = last;
++    else if (!(addr->type & ADDRT_ABSOLUTE)) {
++	addr->lnum = current;
++    }
++    if (addr->type & ADDRT_LOCAL)
++    {
++	addr->lnum += addr->local;
++	/* avoid E16 if address is negative */
++	if (addr->lnum < first)
++	    addr->lnum = first;
++	if (addr->lnum > last)
++	    addr->lnum = last;
++    }
++    return 1;
++}
++
 +
  /*
   * Execute one Ex command.
   *
-@@ -1712,6 +1713,7 @@
+@@ -1712,6 +1752,7 @@
      void		*cookie;		/* argument for fgetline() */
  {
      char_u		*p;
@@ -235,16 +281,17 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
      linenr_T		lnum;
      long		n;
      char_u		*errormsg = NULL;	/* error message */
-@@ -1725,6 +1727,8 @@
+@@ -1725,6 +1766,9 @@
  #endif
      cmdmod_T		save_cmdmod;
      int			ni;			/* set when Not Implemented */
 +    win_T		*wp;
++    buf_T		*buf;
 +    char_u		c;
  
      vim_memset(&ea, 0, sizeof(ea));
      ea.line1 = 1;
-@@ -2020,10 +2024,11 @@
+@@ -2020,10 +2064,11 @@
  	ea.line1 = ea.line2;
  	ea.line2 = curwin->w_cursor.lnum;   /* default is current line number */
  	ea.cmd = skipwhite(ea.cmd);
@@ -258,7 +305,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  	{
  	    if (*ea.cmd == '%')		    /* '%' - all lines */
  	    {
-@@ -2031,6 +2036,7 @@
+@@ -2031,6 +2076,7 @@
  		ea.line1 = 1;
  		ea.line2 = curbuf->b_ml.ml_line_count;
  		++ea.addr_count;
@@ -266,7 +313,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  	    }
  					    /* '*' - visual area */
  	    else if (*ea.cmd == '*' && vim_strchr(p_cpo, CPO_STAR) == NULL)
-@@ -2053,7 +2059,7 @@
+@@ -2053,7 +2099,7 @@
  	    }
  	}
  	else
@@ -275,7 +322,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  	ea.addr_count++;
  
  	if (*ea.cmd == ';')
-@@ -2069,9 +2075,10 @@
+@@ -2069,9 +2115,10 @@
      /* One address given: set start and end lines */
      if (ea.addr_count == 1)
      {
@@ -287,7 +334,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  	    ea.addr_count = 0;
      }
  
-@@ -2170,6 +2177,167 @@
+@@ -2170,6 +2217,158 @@
  	goto doend;
      }
  
@@ -352,91 +399,49 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
 +	case CMD_argedit:
 +	    if (ea.addr_count == 0)
 +		break;
-+	    if (addr2.type & ADDRT_MARK ||
-+		    addr2.type & ADDRT_SEARCH ||
-+		    addr2.type & ADDRT_REPEAT ||
-+		    addr2.type & ADDRT_ALL ||
-+		    addr2.type & ADDRT_VISUAL)
++	    if (compute_count(&addr2, 0,
++			curwin->w_arg_idx + 1, ARGCOUNT, FALSE) == 0)
 +	    {
 +		/* emit E16 */
 +		errormsg = (char_u *)_(e_invrange);
 +		goto doend;
 +	    }
-+	    else if (addr2.type & ADDRT_LAST)
-+		addr2.lnum = ARGCOUNT;
-+	    else if (!(addr2.type & ADDRT_ABSOLUTE)) {
-+		addr2.lnum = curwin->w_arg_idx + 1;
-+	    }
-+
-+	    if (addr2.type & ADDRT_LOCAL)
++	    else
 +	    {
-+		addr2.lnum += addr2.local;
-+		/* avoid E16 if address is negative */
-+		if (addr2.lnum < 0)
-+		    addr2.lnum = 0;
-+		if (addr2.lnum > ARGCOUNT)
-+		    addr2.lnum = ARGCOUNT;
++		ea.line1 = ea.line2 = addr2.lnum;
 +	    }
-+	    ea.line1 = ea.line2 = addr2.lnum;
 +	    break;
 +	case CMD_argdelete:
 +	    if (ea.addr_count > 1) {
-+		if (addr1.type & ADDRT_MARK ||
-+			addr1.type & ADDRT_SEARCH ||
-+			addr1.type & ADDRT_REPEAT ||
-+			addr1.type & ADDRT_ALL ||
-+			addr1.type & ADDRT_VISUAL)
++		if (compute_count(&addr1, 1,
++			    curwin->w_arg_idx + 1, ARGCOUNT, FALSE) == 0)
 +		{
 +		    /* emit E16 */
 +		    errormsg = (char_u *)_(e_invrange);
 +		    goto doend;
 +		}
-+		else if (addr1.type & ADDRT_LAST)	/* :$,$argdlete */
-+		    addr1.lnum = ARGCOUNT;
-+		else if (!(addr1.type & ADDRT_ABSOLUTE)) /* :.,$argdelete, :-5,$argdelete */
-+		    addr1.lnum = curwin->w_arg_idx + 1;
-+		if (addr1.type & ADDRT_LOCAL)
-+		{
-+		    addr1.lnum += addr1.local;
-+		    /* avoid E16 if address is negative */
-+		    if (addr1.lnum <= 0)
-+			addr1.lnum = 1;
-+		    if (addr1.lnum > ARGCOUNT)
-+			addr1.lnum = ARGCOUNT;
-+		}
-+		ea.line1 = addr1.lnum;
++		else
++		    ea.line1 = addr1.lnum;
 +	    }
 +
 +	    c = skipwhite(p)[0];
 +	    if (ea.addr_count > 0)
 +	    {
-+		if (addr2.type & ADDRT_MARK ||
-+			addr2.type & ADDRT_SEARCH ||
-+			addr2.type & ADDRT_REPEAT ||
-+			addr2.type & ADDRT_VISUAL)
++		switch (compute_count(&addr2, 1,
++			    curwin->w_arg_idx + 1, ARGCOUNT, TRUE))
 +		{
-+		    /* emit E16 */
-+		    errormsg = (char_u *)_(e_invrange);
-+		    goto doend;
-+		}
-+		else if (addr2.type & ADDRT_ALL) {  /* :%argdelete */
-+		    ea.line1 = 1;
-+		    addr2.lnum = ARGCOUNT > 0 ? ARGCOUNT : 1;
-+		}
-+		else if (addr2.type & ADDRT_LAST)   /* :1,$argdlete */
-+		    addr2.lnum = ARGCOUNT;
-+		else if (!(addr2.type & ADDRT_ABSOLUTE))
-+		    addr2.lnum = curwin->w_arg_idx + 1;
-+		if (addr2.type & ADDRT_LOCAL)	/* :1,$-3argdelete */
-+		{
-+		    addr2.lnum += addr2.local;
-+		    /* avoid E16 if address is negative */
-+		    if (addr2.lnum <= 0)
-+			addr2.lnum = 1;
-+		    if (addr2.lnum > ARGCOUNT)
-+			addr2.lnum = ARGCOUNT;
-+		}
-+		ea.line2 = addr2.lnum;
++		    case 2:
++			ea.line1 = 1;
++		    default:
++		    case 1:
++			ea.line2 = addr2.lnum;
++			break;
++		    case 0:
++			/* emit E16 */
++			errormsg = (char_u *)_(e_invrange);
++			goto doend;
++			break;
++		};
 +	    }
 +	    else if (c == '\0' || c == '|')    /* expand :argdelete to :.argdelete */
 +	    {
@@ -450,12 +455,45 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
 +		ea.line1 = ea.line2;
 +	    }
 +	    break;
++	case CMD_bunload:
++	case CMD_bdelete:
++	case CMD_bwipeout:
++	    if (ea.addr_count > 1) {
++		if (compute_count(&addr1, firstbuf->b_fnum,
++			    curbuf->b_fnum, lastbuf->b_fnum, FALSE) == 0)
++		{
++		    /* emit E16 */
++		    errormsg = (char_u *)_(e_invrange);
++		    goto doend;
++		}
++		else
++		    ea.line1 = addr1.lnum;
++	    }
++
++	    if (ea.addr_count > 0) {
++		switch (compute_count(&addr2, firstbuf->b_fnum,
++			    curbuf->b_fnum, lastbuf->b_fnum, TRUE))
++		{
++		    case 2:
++			ea.line1 = firstbuf->b_fnum;
++		    default:
++		    case 1:
++			ea.line2 = addr2.lnum;
++			break;
++		    case 0:
++			/* emit E16 */
++			errormsg = (char_u *)_(e_invrange);
++			goto doend;
++			break;
++		};
++	    }
++	    break;
 +    }
 +
      ni = (
  #ifdef FEAT_USR_CMDS
  	    !USER_CMDIDX(ea.cmdidx) &&
-@@ -3338,7 +3506,7 @@
+@@ -3338,7 +3537,7 @@
  	++p;
      }
  
@@ -464,7 +502,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
   * 5. parse arguments
   */
  #ifdef FEAT_USR_CMDS
-@@ -4082,7 +4250,7 @@
+@@ -4082,7 +4281,7 @@
   *
   * Return MAXLNUM when no Ex address was found.
   */
@@ -473,7 +511,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  get_address(ptr, skip, to_other_file)
      char_u	**ptr;
      int		skip;	    /* only skip the address, don't use it */
-@@ -4094,22 +4262,26 @@
+@@ -4094,22 +4293,26 @@
      char_u	*cmd;
      pos_T	pos;
      pos_T	*fp;
@@ -504,7 +542,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  			break;
  
  	    case '\'':			    /* ''' - mark */
-@@ -4126,9 +4298,10 @@
+@@ -4126,9 +4329,10 @@
  			     * used by itself: ":'M". */
  			    fp = getmark(*cmd, to_other_file && cmd[1] == NUL);
  			    ++cmd;
@@ -516,7 +554,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  			    else
  			    {
  				if (check_mark(fp) == FAIL)
-@@ -4136,7 +4309,7 @@
+@@ -4136,7 +4340,7 @@
  				    cmd = NULL;
  				    goto error;
  				}
@@ -525,7 +563,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  			    }
  			}
  			break;
-@@ -4157,8 +4330,8 @@
+@@ -4157,8 +4361,8 @@
  			     * When '/' or '?' follows another address, start
  			     * from there.
  			     */
@@ -536,7 +574,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  			    /*
  			     * Start a forward search at the end of the line.
  			     * Start a backward search at the start of the line.
-@@ -4178,7 +4351,8 @@
+@@ -4178,7 +4382,8 @@
  				cmd = NULL;
  				goto error;
  			    }
@@ -546,7 +584,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  			    curwin->w_cursor = pos;
  			    /* adjust command string pointer */
  			    cmd += searchcmdlen;
-@@ -4204,8 +4378,9 @@
+@@ -4204,8 +4409,9 @@
  			     * When search follows another address, start from
  			     * there.
  			     */
@@ -558,7 +596,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  			    else
  				pos.lnum = curwin->w_cursor.lnum;
  
-@@ -4221,7 +4396,7 @@
+@@ -4221,7 +4427,7 @@
  					*cmd == '?' ? BACKWARD : FORWARD,
  					(char_u *)"", 1L, SEARCH_MSG,
  						i, (linenr_T)0, NULL) != FAIL)
@@ -567,7 +605,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  			    else
  			    {
  				cmd = NULL;
-@@ -4233,7 +4408,10 @@
+@@ -4233,7 +4439,10 @@
  
  	    default:
  			if (VIM_ISDIGIT(*cmd))	/* absolute line number */
@@ -579,7 +617,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  	}
  
  	for (;;)
-@@ -4242,8 +4420,9 @@
+@@ -4242,8 +4451,9 @@
  	    if (*cmd != '-' && *cmd != '+' && !VIM_ISDIGIT(*cmd))
  		break;
  
@@ -591,7 +629,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  	    if (VIM_ISDIGIT(*cmd))
  		i = '+';		/* "number" is same as "+number" */
  	    else
-@@ -4253,15 +4432,21 @@
+@@ -4253,15 +4463,21 @@
  	    else
  		n = getdigits(&cmd);
  	    if (i == '-')
@@ -616,7 +654,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  }
  
  /*
-@@ -6545,6 +6730,11 @@
+@@ -6545,6 +6761,11 @@
  ex_quit(eap)
      exarg_T	*eap;
  {
@@ -628,7 +666,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  #ifdef FEAT_CMDWIN
      if (cmdwin_type != 0)
      {
-@@ -6558,11 +6748,28 @@
+@@ -6558,11 +6779,28 @@
  	text_locked_msg();
  	return;
      }
@@ -658,7 +696,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  	return;
  #endif
  
-@@ -6595,7 +6802,7 @@
+@@ -6595,7 +6833,7 @@
  	need_mouse_correct = TRUE;
  # endif
  	/* close window; may free buffer */
@@ -667,7 +705,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  #endif
      }
  }
-@@ -6657,6 +6864,8 @@
+@@ -6657,6 +6895,8 @@
  ex_close(eap)
      exarg_T	*eap;
  {
@@ -676,7 +714,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  # ifdef FEAT_CMDWIN
      if (cmdwin_type != 0)
  	cmdwin_result = Ctrl_C;
-@@ -6667,7 +6876,21 @@
+@@ -6667,7 +6907,21 @@
  		&& !curbuf_locked()
  #endif
  		)
@@ -699,7 +737,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  }
  
  # ifdef FEAT_QUICKFIX
-@@ -6871,9 +7094,23 @@
+@@ -6871,9 +7125,23 @@
  ex_only(eap)
      exarg_T	*eap;
  {
@@ -723,7 +761,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
      close_others(TRUE, eap->forceit);
  }
  
-@@ -6895,6 +7132,9 @@
+@@ -6895,6 +7163,9 @@
  ex_hide(eap)
      exarg_T	*eap;
  {
@@ -733,7 +771,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
      if (*eap->arg != NUL && check_nextcmd(eap->arg) == NULL)
  	eap->errmsg = e_invarg;
      else
-@@ -6907,7 +7147,19 @@
+@@ -6907,7 +7178,19 @@
  # ifdef FEAT_GUI
  	    need_mouse_correct = TRUE;
  # endif
@@ -754,7 +792,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
  	}
  #endif
      }
-@@ -8639,9 +8891,9 @@
+@@ -8639,9 +8922,9 @@
  ex_copymove(eap)
      exarg_T	*eap;
  {
@@ -767,7 +805,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
      if (eap->arg == NULL)	    /* error detected */
      {
  	eap->nextcmd = NULL;
-@@ -8650,9 +8902,10 @@
+@@ -8650,9 +8933,10 @@
      get_flags(eap);
  
      /*
@@ -780,7 +818,7 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
      {
  	EMSG(_(e_invaddr));
  	return;
-@@ -8660,11 +8913,11 @@
+@@ -8660,11 +8944,11 @@
  
      if (eap->cmdidx == CMD_move)
      {
@@ -794,9 +832,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
      u_clearline();
      beginline(BL_SOL | BL_FIX);
      ex_may_print(eap);
-diff -r 18fd959b07ef -r 6d08f064ec48 src/structs.h
+diff -r 18fd959b07ef -r b796af562df3 src/structs.h
 --- a/src/structs.h	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/structs.h	Wed Aug 20 22:31:55 2014 +0100
++++ b/src/structs.h	Thu Aug 21 00:16:25 2014 +0100
 @@ -21,6 +21,16 @@
  #endif
  
@@ -814,9 +852,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/structs.h
   * position in file or buffer
   */
  typedef struct
-diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test108.in
+diff -r 18fd959b07ef -r b796af562df3 src/testdir/test108.in
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/testdir/test108.in	Wed Aug 20 22:31:55 2014 +0100
++++ b/src/testdir/test108.in	Thu Aug 21 00:16:25 2014 +0100
 @@ -0,0 +1,153 @@
 +Tests for :[count]close! and :[count]hide     vim: set ft=vim :
 +
@@ -971,9 +1009,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test108.in
 +ENDTEST
 +
 +
-diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test108.ok
+diff -r 18fd959b07ef -r b796af562df3 src/testdir/test108.ok
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/testdir/test108.ok	Wed Aug 20 22:31:55 2014 +0100
++++ b/src/testdir/test108.ok	Thu Aug 21 00:16:25 2014 +0100
 @@ -0,0 +1,22 @@
 +6 5 4 2 1
 +5 4 2 1
@@ -997,9 +1035,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test108.ok
 +24 23 21 1
 +24 23 21
 +24 21
-diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test109.in
+diff -r 18fd959b07ef -r b796af562df3 src/testdir/test109.in
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/testdir/test109.in	Wed Aug 20 22:31:55 2014 +0100
++++ b/src/testdir/test109.in	Thu Aug 21 00:16:25 2014 +0100
 @@ -0,0 +1,47 @@
 +Tests for :[count]argument! and :[count]argdelete     vim: set ft=vim :
 +
@@ -1048,9 +1086,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test109.in
 +ENDTEST
 +
 +
-diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test109.ok
+diff -r 18fd959b07ef -r b796af562df3 src/testdir/test109.ok
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/testdir/test109.ok	Wed Aug 20 22:31:55 2014 +0100
++++ b/src/testdir/test109.ok	Thu Aug 21 00:16:25 2014 +0100
 @@ -0,0 +1,13 @@
 +d
 +c
@@ -1065,9 +1103,9 @@ diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test109.ok
 +Y a b c d x
 +
 +a f
-diff -r 18fd959b07ef -r 6d08f064ec48 src/window.c
+diff -r 18fd959b07ef -r b796af562df3 src/window.c
 --- a/src/window.c	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/window.c	Wed Aug 20 22:31:55 2014 +0100
++++ b/src/window.c	Thu Aug 21 00:16:25 2014 +0100
 @@ -199,14 +199,22 @@
      case Ctrl_Q:
      case 'q':
