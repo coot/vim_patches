@@ -1,6 +1,6 @@
-diff -r 18fd959b07ef -r 16480f478dc1 runtime/doc/editing.txt
+diff -r 18fd959b07ef -r 6d08f064ec48 runtime/doc/editing.txt
 --- a/runtime/doc/editing.txt	Wed Aug 13 22:05:54 2014 +0200
-+++ b/runtime/doc/editing.txt	Sat Aug 16 12:18:53 2014 +0100
++++ b/runtime/doc/editing.txt	Wed Aug 20 22:31:55 2014 +0100
 @@ -619,7 +619,8 @@
  				:argadd x	a b x c
  				:0argadd x	x a b c
@@ -34,9 +34,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 runtime/doc/editing.txt
  			{not in Vi} {not available when compiled without the
  			|+listcmds| feature}
  
-diff -r 18fd959b07ef -r 16480f478dc1 runtime/doc/windows.txt
+diff -r 18fd959b07ef -r 6d08f064ec48 runtime/doc/windows.txt
 --- a/runtime/doc/windows.txt	Wed Aug 13 22:05:54 2014 +0200
-+++ b/runtime/doc/windows.txt	Sat Aug 16 12:18:53 2014 +0100
++++ b/runtime/doc/windows.txt	Wed Aug 20 22:31:55 2014 +0100
 @@ -265,26 +265,40 @@
  
  CTRL-W q						*CTRL-W_q*
@@ -141,9 +141,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 runtime/doc/windows.txt
  
  ==============================================================================
  4. Moving cursor to other windows			*window-move-cursor*
-diff -r 18fd959b07ef -r 16480f478dc1 src/Makefile
+diff -r 18fd959b07ef -r 6d08f064ec48 src/Makefile
 --- a/src/Makefile	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/Makefile	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/Makefile	Wed Aug 20 22:31:55 2014 +0100
 @@ -1907,7 +1907,8 @@
  	test70 test71 test72 test73 test74 test75 test76 test77 test78 test79 \
  	test80 test81 test82 test83 test84 test85 test86 test87 test88 test89 \
@@ -154,9 +154,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/Makefile
  	cd testdir; rm $@.out; $(MAKE) -f Makefile $@.out VIMPROG=../$(VIMTARGET) $(GUI_TESTARG) SCRIPTSOURCE=../$(SCRIPTSOURCE)
  
  testclean:
-diff -r 18fd959b07ef -r 16480f478dc1 src/ex_cmds.h
+diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_cmds.h
 --- a/src/ex_cmds.h	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/ex_cmds.h	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/ex_cmds.h	Wed Aug 20 22:31:55 2014 +0100
 @@ -232,7 +232,7 @@
  EX(CMD_clast,		"clast",	ex_cc,
  			RANGE|NOTADR|COUNT|TRLBAR|BANG),
@@ -207,9 +207,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/ex_cmds.h
 +#define ADDRT_LOCAL	0x100	/* '+[linenr], or -[linenr]' */
 +#define ADDRT_ALL	0x200	/* '%' */
 +#define ADDRT_VISUAL	0x400	/* '*' */
-diff -r 18fd959b07ef -r 16480f478dc1 src/ex_docmd.c
+diff -r 18fd959b07ef -r 6d08f064ec48 src/ex_docmd.c
 --- a/src/ex_docmd.c	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/ex_docmd.c	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/ex_docmd.c	Wed Aug 20 22:31:55 2014 +0100
 @@ -128,7 +128,7 @@
  #endif
  
@@ -421,7 +421,7 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/ex_docmd.c
 +		}
 +		else if (addr2.type & ADDRT_ALL) {  /* :%argdelete */
 +		    ea.line1 = 1;
-+		    addr2.lnum = ARGCOUNT;
++		    addr2.lnum = ARGCOUNT > 0 ? ARGCOUNT : 1;
 +		}
 +		else if (addr2.type & ADDRT_LAST)   /* :1,$argdlete */
 +		    addr2.lnum = ARGCOUNT;
@@ -794,9 +794,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/ex_docmd.c
      u_clearline();
      beginline(BL_SOL | BL_FIX);
      ex_may_print(eap);
-diff -r 18fd959b07ef -r 16480f478dc1 src/structs.h
+diff -r 18fd959b07ef -r 6d08f064ec48 src/structs.h
 --- a/src/structs.h	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/structs.h	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/structs.h	Wed Aug 20 22:31:55 2014 +0100
 @@ -21,6 +21,16 @@
  #endif
  
@@ -814,9 +814,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/structs.h
   * position in file or buffer
   */
  typedef struct
-diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test108.in
+diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test108.in
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/testdir/test108.in	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/testdir/test108.in	Wed Aug 20 22:31:55 2014 +0100
 @@ -0,0 +1,153 @@
 +Tests for :[count]close! and :[count]hide     vim: set ft=vim :
 +
@@ -971,9 +971,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test108.in
 +ENDTEST
 +
 +
-diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test108.ok
+diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test108.ok
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/testdir/test108.ok	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/testdir/test108.ok	Wed Aug 20 22:31:55 2014 +0100
 @@ -0,0 +1,22 @@
 +6 5 4 2 1
 +5 4 2 1
@@ -997,9 +997,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test108.ok
 +24 23 21 1
 +24 23 21
 +24 21
-diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test109.in
+diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test109.in
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/testdir/test109.in	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/testdir/test109.in	Wed Aug 20 22:31:55 2014 +0100
 @@ -0,0 +1,47 @@
 +Tests for :[count]argument! and :[count]argdelete     vim: set ft=vim :
 +
@@ -1048,9 +1048,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test109.in
 +ENDTEST
 +
 +
-diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test109.ok
+diff -r 18fd959b07ef -r 6d08f064ec48 src/testdir/test109.ok
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/testdir/test109.ok	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/testdir/test109.ok	Wed Aug 20 22:31:55 2014 +0100
 @@ -0,0 +1,13 @@
 +d
 +c
@@ -1065,9 +1065,9 @@ diff -r 18fd959b07ef -r 16480f478dc1 src/testdir/test109.ok
 +Y a b c d x
 +
 +a f
-diff -r 18fd959b07ef -r 16480f478dc1 src/window.c
+diff -r 18fd959b07ef -r 6d08f064ec48 src/window.c
 --- a/src/window.c	Wed Aug 13 22:05:54 2014 +0200
-+++ b/src/window.c	Sat Aug 16 12:18:53 2014 +0100
++++ b/src/window.c	Wed Aug 20 22:31:55 2014 +0100
 @@ -199,14 +199,22 @@
      case Ctrl_Q:
      case 'q':
