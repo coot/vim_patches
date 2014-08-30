@@ -1,5 +1,5 @@
-diff -r 18fd959b07ef -r 941dd36a88b5 runtime/doc/editing.txt
---- a/runtime/doc/editing.txt	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r 1333a7ca01af runtime/doc/editing.txt
+--- a/runtime/doc/editing.txt	Fri Aug 29 17:45:32 2014 +0200
 +++ b/runtime/doc/editing.txt	Sun Aug 24 18:55:01 2014 +0100
 @@ -619,7 +619,8 @@
  				:argadd x	a b x c
@@ -34,8 +34,8 @@ diff -r 18fd959b07ef -r 941dd36a88b5 runtime/doc/editing.txt
  			{not in Vi} {not available when compiled without the
  			|+listcmds| feature}
  
-diff -r 18fd959b07ef -r 941dd36a88b5 runtime/doc/windows.txt
---- a/runtime/doc/windows.txt	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r 1333a7ca01af runtime/doc/windows.txt
+--- a/runtime/doc/windows.txt	Fri Aug 29 17:45:32 2014 +0200
 +++ b/runtime/doc/windows.txt	Sun Aug 24 18:55:01 2014 +0100
 @@ -265,26 +265,40 @@
  
@@ -141,8 +141,8 @@ diff -r 18fd959b07ef -r 941dd36a88b5 runtime/doc/windows.txt
  
  ==============================================================================
  4. Moving cursor to other windows			*window-move-cursor*
-diff -r 18fd959b07ef -r 941dd36a88b5 src/Makefile
---- a/src/Makefile	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r 1333a7ca01af src/Makefile
+--- a/src/Makefile	Fri Aug 29 17:45:32 2014 +0200
 +++ b/src/Makefile	Sun Aug 24 18:55:01 2014 +0100
 @@ -1907,7 +1907,8 @@
  	test70 test71 test72 test73 test74 test75 test76 test77 test78 test79 \
@@ -154,8 +154,8 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/Makefile
  	cd testdir; rm $@.out; $(MAKE) -f Makefile $@.out VIMPROG=../$(VIMTARGET) $(GUI_TESTARG) SCRIPTSOURCE=../$(SCRIPTSOURCE)
  
  testclean:
-diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_cmds.h
---- a/src/ex_cmds.h	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r 1333a7ca01af src/ex_cmds.h
+--- a/src/ex_cmds.h	Fri Aug 29 17:45:32 2014 +0200
 +++ b/src/ex_cmds.h	Sun Aug 24 18:55:01 2014 +0100
 @@ -232,7 +232,7 @@
  EX(CMD_clast,		"clast",	ex_cc,
@@ -207,8 +207,8 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_cmds.h
 +#define ADDRT_LOCAL	0x100	/* '+[linenr], or -[linenr]' */
 +#define ADDRT_ALL	0x200	/* '%' */
 +#define ADDRT_VISUAL	0x400	/* '*' */
-diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
---- a/src/ex_docmd.c	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r 1333a7ca01af src/ex_docmd.c
+--- a/src/ex_docmd.c	Fri Aug 29 17:45:32 2014 +0200
 +++ b/src/ex_docmd.c	Sun Aug 24 18:55:01 2014 +0100
 @@ -55,6 +55,7 @@
  # define ex_delcommand	ex_ni
@@ -334,7 +334,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  	    ea.addr_count = 0;
      }
  
-@@ -2170,6 +2217,223 @@
+@@ -2190,6 +2237,227 @@
  	goto doend;
      }
  
@@ -483,6 +483,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
 +				break;
 +			    buf = buf->b_prev;
 +			    if (ea.cmdidx != CMD_bwipeout)
++				/* skip over unloaded buffers */
 +				while (buf->b_prev != NULL && buf->b_ml.ml_mfp == NULL)
 +				    buf = buf->b_prev;
 +			}
@@ -493,6 +494,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
 +				break;
 +			    buf = buf->b_next;
 +			    if (ea.cmdidx != CMD_bwipeout)
++				/* skip over unloaded buffers */
 +				while (buf->b_next != NULL && buf->b_ml.ml_mfp == NULL)
 +				    buf = buf->b_next;
 +			}
@@ -527,6 +529,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
 +					break;
 +				    buf = buf->b_prev;
 +				    if (ea.cmdidx != CMD_bwipeout)
++					/* skip over unloaded buffers */
 +					while (buf->b_prev != NULL && buf->b_ml.ml_mfp == NULL)
 +					    buf = buf->b_prev;
 +				}
@@ -537,6 +540,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
 +					break;
 +				    buf = buf->b_next;
 +				    if (ea.cmdidx != CMD_bwipeout)
++					/* skip over unloaded buffers */
 +					while (buf->b_next != NULL && buf->b_ml.ml_mfp == NULL)
 +					    buf = buf->b_next;
 +				}
@@ -558,7 +562,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
      ni = (
  #ifdef FEAT_USR_CMDS
  	    !USER_CMDIDX(ea.cmdidx) &&
-@@ -3338,7 +3602,7 @@
+@@ -3358,7 +3626,7 @@
  	++p;
      }
  
@@ -567,7 +571,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
   * 5. parse arguments
   */
  #ifdef FEAT_USR_CMDS
-@@ -4082,7 +4346,7 @@
+@@ -4102,7 +4370,7 @@
   *
   * Return MAXLNUM when no Ex address was found.
   */
@@ -576,7 +580,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  get_address(ptr, skip, to_other_file)
      char_u	**ptr;
      int		skip;	    /* only skip the address, don't use it */
-@@ -4094,22 +4358,26 @@
+@@ -4114,22 +4382,26 @@
      char_u	*cmd;
      pos_T	pos;
      pos_T	*fp;
@@ -607,7 +611,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  			break;
  
  	    case '\'':			    /* ''' - mark */
-@@ -4126,9 +4394,10 @@
+@@ -4146,9 +4418,10 @@
  			     * used by itself: ":'M". */
  			    fp = getmark(*cmd, to_other_file && cmd[1] == NUL);
  			    ++cmd;
@@ -619,7 +623,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  			    else
  			    {
  				if (check_mark(fp) == FAIL)
-@@ -4136,7 +4405,7 @@
+@@ -4156,7 +4429,7 @@
  				    cmd = NULL;
  				    goto error;
  				}
@@ -628,7 +632,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  			    }
  			}
  			break;
-@@ -4157,8 +4426,8 @@
+@@ -4177,8 +4450,8 @@
  			     * When '/' or '?' follows another address, start
  			     * from there.
  			     */
@@ -639,7 +643,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  			    /*
  			     * Start a forward search at the end of the line.
  			     * Start a backward search at the start of the line.
-@@ -4178,7 +4447,8 @@
+@@ -4198,7 +4471,8 @@
  				cmd = NULL;
  				goto error;
  			    }
@@ -649,7 +653,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  			    curwin->w_cursor = pos;
  			    /* adjust command string pointer */
  			    cmd += searchcmdlen;
-@@ -4204,8 +4474,9 @@
+@@ -4224,8 +4498,9 @@
  			     * When search follows another address, start from
  			     * there.
  			     */
@@ -661,7 +665,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  			    else
  				pos.lnum = curwin->w_cursor.lnum;
  
-@@ -4221,7 +4492,7 @@
+@@ -4241,7 +4516,7 @@
  					*cmd == '?' ? BACKWARD : FORWARD,
  					(char_u *)"", 1L, SEARCH_MSG,
  						i, (linenr_T)0, NULL) != FAIL)
@@ -670,7 +674,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  			    else
  			    {
  				cmd = NULL;
-@@ -4233,7 +4504,10 @@
+@@ -4253,7 +4528,10 @@
  
  	    default:
  			if (VIM_ISDIGIT(*cmd))	/* absolute line number */
@@ -682,7 +686,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  	}
  
  	for (;;)
-@@ -4242,8 +4516,9 @@
+@@ -4262,8 +4540,9 @@
  	    if (*cmd != '-' && *cmd != '+' && !VIM_ISDIGIT(*cmd))
  		break;
  
@@ -694,7 +698,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  	    if (VIM_ISDIGIT(*cmd))
  		i = '+';		/* "number" is same as "+number" */
  	    else
-@@ -4253,15 +4528,21 @@
+@@ -4273,15 +4552,21 @@
  	    else
  		n = getdigits(&cmd);
  	    if (i == '-')
@@ -719,7 +723,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  }
  
  /*
-@@ -6545,6 +6826,11 @@
+@@ -6565,6 +6850,11 @@
  ex_quit(eap)
      exarg_T	*eap;
  {
@@ -731,7 +735,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  #ifdef FEAT_CMDWIN
      if (cmdwin_type != 0)
      {
-@@ -6558,11 +6844,28 @@
+@@ -6578,11 +6868,28 @@
  	text_locked_msg();
  	return;
      }
@@ -761,7 +765,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  	return;
  #endif
  
-@@ -6595,7 +6898,7 @@
+@@ -6615,7 +6922,7 @@
  	need_mouse_correct = TRUE;
  # endif
  	/* close window; may free buffer */
@@ -770,7 +774,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  #endif
      }
  }
-@@ -6657,6 +6960,8 @@
+@@ -6677,6 +6984,8 @@
  ex_close(eap)
      exarg_T	*eap;
  {
@@ -779,7 +783,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  # ifdef FEAT_CMDWIN
      if (cmdwin_type != 0)
  	cmdwin_result = Ctrl_C;
-@@ -6667,7 +6972,21 @@
+@@ -6687,7 +6996,21 @@
  		&& !curbuf_locked()
  #endif
  		)
@@ -802,7 +806,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  }
  
  # ifdef FEAT_QUICKFIX
-@@ -6871,9 +7190,23 @@
+@@ -6891,9 +7214,23 @@
  ex_only(eap)
      exarg_T	*eap;
  {
@@ -826,7 +830,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
      close_others(TRUE, eap->forceit);
  }
  
-@@ -6895,6 +7228,9 @@
+@@ -6915,6 +7252,9 @@
  ex_hide(eap)
      exarg_T	*eap;
  {
@@ -836,7 +840,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
      if (*eap->arg != NUL && check_nextcmd(eap->arg) == NULL)
  	eap->errmsg = e_invarg;
      else
-@@ -6907,7 +7243,19 @@
+@@ -6927,7 +7267,19 @@
  # ifdef FEAT_GUI
  	    need_mouse_correct = TRUE;
  # endif
@@ -857,7 +861,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
  	}
  #endif
      }
-@@ -8639,9 +8987,9 @@
+@@ -8659,9 +9011,9 @@
  ex_copymove(eap)
      exarg_T	*eap;
  {
@@ -870,7 +874,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
      if (eap->arg == NULL)	    /* error detected */
      {
  	eap->nextcmd = NULL;
-@@ -8650,9 +8998,10 @@
+@@ -8670,9 +9022,10 @@
      get_flags(eap);
  
      /*
@@ -883,7 +887,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
      {
  	EMSG(_(e_invaddr));
  	return;
-@@ -8660,11 +9009,11 @@
+@@ -8680,11 +9033,11 @@
  
      if (eap->cmdidx == CMD_move)
      {
@@ -897,8 +901,8 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/ex_docmd.c
      u_clearline();
      beginline(BL_SOL | BL_FIX);
      ex_may_print(eap);
-diff -r 18fd959b07ef -r 941dd36a88b5 src/structs.h
---- a/src/structs.h	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r 1333a7ca01af src/structs.h
+--- a/src/structs.h	Fri Aug 29 17:45:32 2014 +0200
 +++ b/src/structs.h	Sun Aug 24 18:55:01 2014 +0100
 @@ -21,6 +21,16 @@
  #endif
@@ -917,7 +921,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/structs.h
   * position in file or buffer
   */
  typedef struct
-diff -r 18fd959b07ef -r 941dd36a88b5 src/testdir/test108.in
+diff -r 35ec194cce5b -r 1333a7ca01af src/testdir/test108.in
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/src/testdir/test108.in	Sun Aug 24 18:55:01 2014 +0100
 @@ -0,0 +1,153 @@
@@ -1074,7 +1078,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/testdir/test108.in
 +ENDTEST
 +
 +
-diff -r 18fd959b07ef -r 941dd36a88b5 src/testdir/test108.ok
+diff -r 35ec194cce5b -r 1333a7ca01af src/testdir/test108.ok
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/src/testdir/test108.ok	Sun Aug 24 18:55:01 2014 +0100
 @@ -0,0 +1,22 @@
@@ -1100,7 +1104,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/testdir/test108.ok
 +24 23 21 1
 +24 23 21
 +24 21
-diff -r 18fd959b07ef -r 941dd36a88b5 src/testdir/test109.in
+diff -r 35ec194cce5b -r 1333a7ca01af src/testdir/test109.in
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/src/testdir/test109.in	Sun Aug 24 18:55:01 2014 +0100
 @@ -0,0 +1,47 @@
@@ -1151,7 +1155,7 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/testdir/test109.in
 +ENDTEST
 +
 +
-diff -r 18fd959b07ef -r 941dd36a88b5 src/testdir/test109.ok
+diff -r 35ec194cce5b -r 1333a7ca01af src/testdir/test109.ok
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
 +++ b/src/testdir/test109.ok	Sun Aug 24 18:55:01 2014 +0100
 @@ -0,0 +1,13 @@
@@ -1168,8 +1172,8 @@ diff -r 18fd959b07ef -r 941dd36a88b5 src/testdir/test109.ok
 +Y a b c d x
 +
 +a f
-diff -r 18fd959b07ef -r 941dd36a88b5 src/window.c
---- a/src/window.c	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r 1333a7ca01af src/window.c
+--- a/src/window.c	Fri Aug 29 17:45:32 2014 +0200
 +++ b/src/window.c	Sun Aug 24 18:55:01 2014 +0100
 @@ -199,14 +199,22 @@
      case Ctrl_Q:

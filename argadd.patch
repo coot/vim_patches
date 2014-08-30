@@ -1,5 +1,5 @@
-diff -r 18fd959b07ef -r d9f82c5cf1f5 src/ex_cmds.h
---- a/src/ex_cmds.h	Wed Aug 13 22:05:54 2014 +0200
+diff -r b9ec5ed29480 -r b95122e84f81 src/ex_cmds.h
+--- a/src/ex_cmds.h	Thu Aug 21 00:16:25 2014 +0100
 +++ b/src/ex_cmds.h	Tue Aug 12 10:31:37 2014 +0100
 @@ -110,7 +110,7 @@
  EX(CMD_args,		"args",		ex_args,
@@ -10,8 +10,8 @@ diff -r 18fd959b07ef -r d9f82c5cf1f5 src/ex_cmds.h
  EX(CMD_argdelete,	"argdelete",	ex_argdelete,
  			BANG|RANGE|NOTADR|FILES|TRLBAR),
  EX(CMD_argdo,		"argdo",	ex_listdo,
-diff -r 18fd959b07ef -r d9f82c5cf1f5 src/ex_cmds2.c
---- a/src/ex_cmds2.c	Wed Aug 13 22:05:54 2014 +0200
+diff -r b9ec5ed29480 -r b95122e84f81 src/ex_cmds2.c
+--- a/src/ex_cmds2.c	Thu Aug 21 00:16:25 2014 +0100
 +++ b/src/ex_cmds2.c	Tue Aug 12 10:31:37 2014 +0100
 @@ -1946,6 +1946,11 @@
  #endif

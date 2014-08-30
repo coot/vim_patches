@@ -1,5 +1,5 @@
-diff -r 18fd959b07ef -r bf9ff84941f6 runtime/doc/windows.txt
---- a/runtime/doc/windows.txt	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r ae65dd9fa7f5 runtime/doc/windows.txt
+--- a/runtime/doc/windows.txt	Fri Aug 29 17:45:32 2014 +0200
 +++ b/runtime/doc/windows.txt	Mon Aug 18 12:07:52 2014 +0100
 @@ -1042,36 +1042,41 @@
  		a number).  Insert a backslash before a space in a buffer
@@ -129,8 +129,8 @@ diff -r 18fd959b07ef -r bf9ff84941f6 runtime/doc/windows.txt
  		Split window and go to [N]th next modified buffer.
  		Respects 'switchbuf' option.
  		Note: this command also finds buffers not in the buffer list.
-diff -r 18fd959b07ef -r bf9ff84941f6 src/ex_cmds.h
---- a/src/ex_cmds.h	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r ae65dd9fa7f5 src/ex_cmds.h
+--- a/src/ex_cmds.h	Fri Aug 29 17:45:32 2014 +0200
 +++ b/src/ex_cmds.h	Mon Aug 18 12:07:52 2014 +0100
 @@ -132,9 +132,9 @@
  EX(CMD_aunmenu,		"aunmenu",	ex_menu,
@@ -203,10 +203,10 @@ diff -r 18fd959b07ef -r bf9ff84941f6 src/ex_cmds.h
  EX(CMD_scriptnames,	"scriptnames",	ex_scriptnames,
  			TRLBAR|CMDWIN),
  EX(CMD_scriptencoding,	"scriptencoding", ex_scriptencoding,
-diff -r 18fd959b07ef -r bf9ff84941f6 src/ex_docmd.c
---- a/src/ex_docmd.c	Wed Aug 13 22:05:54 2014 +0200
+diff -r 35ec194cce5b -r ae65dd9fa7f5 src/ex_docmd.c
+--- a/src/ex_docmd.c	Fri Aug 29 17:45:32 2014 +0200
 +++ b/src/ex_docmd.c	Mon Aug 18 12:07:52 2014 +0100
-@@ -5115,6 +5115,8 @@
+@@ -5135,6 +5135,8 @@
  	    goto_buffer(eap, DOBUF_CURRENT, FORWARD, 0);
  	else
  	    goto_buffer(eap, DOBUF_FIRST, FORWARD, (int)eap->line2);
@@ -215,7 +215,7 @@ diff -r 18fd959b07ef -r bf9ff84941f6 src/ex_docmd.c
      }
  }
  
-@@ -5127,6 +5129,8 @@
+@@ -5147,6 +5149,8 @@
      exarg_T	*eap;
  {
      goto_buffer(eap, DOBUF_MOD, FORWARD, (int)eap->line2);
@@ -224,7 +224,7 @@ diff -r 18fd959b07ef -r bf9ff84941f6 src/ex_docmd.c
  }
  
  /*
-@@ -5138,6 +5142,8 @@
+@@ -5158,6 +5162,8 @@
      exarg_T	*eap;
  {
      goto_buffer(eap, DOBUF_CURRENT, FORWARD, (int)eap->line2);
@@ -233,7 +233,7 @@ diff -r 18fd959b07ef -r bf9ff84941f6 src/ex_docmd.c
  }
  
  /*
-@@ -5151,6 +5157,8 @@
+@@ -5171,6 +5177,8 @@
      exarg_T	*eap;
  {
      goto_buffer(eap, DOBUF_CURRENT, BACKWARD, (int)eap->line2);
@@ -242,7 +242,7 @@ diff -r 18fd959b07ef -r bf9ff84941f6 src/ex_docmd.c
  }
  
  /*
-@@ -5164,6 +5172,8 @@
+@@ -5184,6 +5192,8 @@
      exarg_T	*eap;
  {
      goto_buffer(eap, DOBUF_FIRST, FORWARD, 0);
@@ -251,7 +251,7 @@ diff -r 18fd959b07ef -r bf9ff84941f6 src/ex_docmd.c
  }
  
  /*
-@@ -5175,6 +5185,8 @@
+@@ -5195,6 +5205,8 @@
      exarg_T	*eap;
  {
      goto_buffer(eap, DOBUF_LAST, BACKWARD, 0);
